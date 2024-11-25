@@ -1,0 +1,99 @@
+let price = 19.5;
+let cid = [
+  ["PENNY", 0.5],
+  ["NICKEL", 0],
+  ["DIME", 0],
+  ["QUARTER", 0],
+  ["ONE", 0],
+  ["FIVE", 0],
+  ["TEN", 0],
+  ["TWENTY", 0],
+  ["ONE HUNDRED", 0]
+];
+
+const inputCash = document.getElementById("cash");
+const purcharseBtn = document.getElementById("purchase-btn");
+const changeText = document.getElementById("change-due");
+
+const UNIT_AMOUNT = {
+  "PENNY": 0.01,
+  "NICKEL": 0.05,
+  "DIME": 0.1,
+  "QUARTER": 0.25,
+  "ONE": 1.0,
+  "FIVE": 5.0,
+  "TEN": 10.0,
+  "TWENTY": 20.0,
+  "ONE HUNDRED": 100.0,
+};
+
+purcharseBtn.addEventListener("click", () => {
+  const cashValue = parseFloat(inputCash.value);
+  const changeDue = cashValue - price;
+
+  if (cashValue < price) {
+    alert("Customer does not have enough money to purchase the item");
+    return;
+  }
+
+  if (cashValue === price) {
+    changeText.innerHTML = "No change due - customer paid with exact cash";
+    return;
+  }
+
+  const changeResult = checkCashRegister(price, cashValue, cid);
+
+  if (changeResult.status === "CLOSED") {
+    changeText.innerHTML = `Status: CLOSED ${formatChange(changeResult.change)}`;
+  } else if (changeResult.status === "INSUFFICIENT_FUNDS") {
+    changeText.innerHTML = `Status: INSUFFICIENT_FUNDS`;
+  } else {
+    changeText.innerHTML = `Status: OPEN ${formatChange(changeResult.change)}`;
+  }
+});
+
+function checkCashRegister(price, cash, cid) {
+  let totalCID = cid.reduce((sum, [_, amount]) => sum + amount, 0).toFixed(2);
+
+  let changeToGive = (cash - price).toFixed(2);
+
+  const changeArray = [];
+
+  if (parseFloat(changeToGive) > parseFloat(totalCID)) {
+    return { status: "INSUFFICIENT_FUNDS", change: [] };
+  } else if (parseFloat(changeToGive) === parseFloat(totalCID)) {
+    return { status: "CLOSED", change: cid };
+  } else {
+    cid = cid.reverse();
+
+    for (let elem of cid) {
+      let unit = elem[0];
+      let amountInDrawer = elem[1];
+      let unitValue = UNIT_AMOUNT[unit];
+      let amountFromUnit = 0;
+
+      while (changeToGive >= unitValue && amountInDrawer > 0) {
+        changeToGive -= unitValue;
+        changeToGive = changeToGive.toFixed(2);
+        amountInDrawer -= unitValue;
+        amountFromUnit += unitValue;
+      }
+
+      if (amountFromUnit > 0) {
+        changeArray.push([unit, parseFloat(amountFromUnit.toFixed(2))]);
+      }
+    }
+  }
+
+  if (changeToGive > 0) {
+    return { status: "INSUFFICIENT_FUNDS", change: [] };
+  }
+
+  return { status: "OPEN", change: changeArray };
+}
+
+const formatChange = changeArray =>
+  changeArray
+    .filter(([_, amount]) => amount > 0) 
+    .map(([unit, amount]) => `${unit}: $${parseFloat(amount).toFixed(2)}`)
+    .join(" ");
